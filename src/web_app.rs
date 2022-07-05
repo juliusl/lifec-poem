@@ -62,8 +62,12 @@ where
                             app,
                             async {
                                 match cancel_source.await {
-                                    Ok(_) => todo!(),
-                                    Err(_) => todo!(),
+                                    Ok(_) => {
+                                        tc.update_status_only("Cancelling server").await;
+                                    },
+                                    Err(err) => {
+                                        tc.update_status_only(format!("Error cancelling server, {}", err)).await;
+                                    },
                                 }
                             },
                             tc.as_ref()
