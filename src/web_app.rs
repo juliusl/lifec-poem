@@ -1,4 +1,4 @@
-use lifec::plugins::{Plugin, ThunkContext};
+use lifec::{plugins::{Plugin, ThunkContext}, Component, DenseVecStorage};
 use poem::{Route, Server, listener::TcpListener};
 use tokio::select;
 
@@ -10,9 +10,11 @@ pub trait WebApp {
     fn routes(&mut self) -> Route;
 }
 
+#[derive(Component)]
+#[storage(DenseVecStorage)]
 pub struct AppHost<A>(fn(&mut ThunkContext) -> A)
 where
-    A: WebApp + Send + Sync;
+    A: WebApp + Send + Sync + 'static;
 
 impl<A> Default for AppHost<A> 
 where
