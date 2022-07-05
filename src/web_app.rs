@@ -1,6 +1,10 @@
-use lifec::{plugins::{Plugin, ThunkContext}, Component, DenseVecStorage};
-use poem::{Route, Server, listener::TcpListener};
-use tokio::select;
+use std::time::Duration;
+
+use lifec::{
+    plugins::{Plugin, ThunkContext},
+    Component, DenseVecStorage,
+};
+use poem::{listener::TcpListener, Route, Server};
 
 pub trait WebApp {
     /// update context and returns a new instance of self
@@ -16,18 +20,18 @@ pub struct AppHost<A>(fn(&mut ThunkContext) -> A)
 where
     A: WebApp + Send + Sync + 'static;
 
-impl<A> Default for AppHost<A> 
+impl<A> Default for AppHost<A>
 where
-    A: WebApp + Send + Sync
+    A: WebApp + Send + Sync,
 {
     fn default() -> Self {
         Self(A::create)
     }
 }
 
-impl<A> Plugin<ThunkContext> for AppHost<A> 
+impl<A> Plugin<ThunkContext> for AppHost<A>
 where
-    A: WebApp + Send + Sync
+    A: WebApp + Send + Sync,
 {
     fn symbol() -> &'static str {
         "app_host"
@@ -37,7 +41,12 @@ where
         "Creates an app host with `address`, w/ routes provided by some type `A` which implements WebApp"
     }
 
-    fn call_with_context(context: &mut ThunkContext) -> Option<(tokio::task::JoinHandle<ThunkContext>, tokio::sync::oneshot::Sender<()>)> {
+    fn call_with_context(
+        context: &mut ThunkContext,
+    ) -> Option<(
+        tokio::task::JoinHandle<ThunkContext>,
+        tokio::sync::oneshot::Sender<()>,
+    )> {
         context.clone().task(|cancel_source| {
             let mut tc = context.clone();
             async {
@@ -45,27 +54,33 @@ where
 
                 let app = app.routes();
 
+                // todo duplicated, 
                 if let Some(address) = tc.as_ref().find_text("address") {
                     tc.update_status_only(format!("Starting {}", address)).await;
-                    select! {
-                        result = Server::new(
-                            TcpListener::bind(address))
-                            .run(app) => {
-                                match result {
-                                    Ok(_) => {
-                                        tc.update_status_only("Server is exiting").await; 
-                                    },
-                                    Err(err) => {
-                                        tc.update_status_only(format!("Server error exit {}", err)).await;
-                                        tc.error(|e| {
-                                            e.with_text("err", format!("app host error: {}", err));
-                                        });
-                                    },
+                    let server = Server::new(TcpListener::bind(address))
+                        .run_with_graceful_shutdown(
+                            app,
+                            async {
+                                match cancel_source.await {
+                                    Ok(_) => todo!(),
+                                    Err(_) => todo!(),
                                 }
-                        }
-                        _ = cancel_source => {
-                            tc.update_status_only("Cancelling server").await; 
-                        }
+                            },
+                            tc.as_ref()
+                                .find_int("shutdown_timeout_ms")
+                                .and_then(|f| Some(Duration::from_millis(f as u64))),
+                        );
+                    
+                    match server.await {
+                        Ok(_) => {
+                            tc.update_status_only("Server is exiting").await;
+                        },
+                        Err(err) => {
+                            tc.update_status_only(format!("Server error exit {}", err)).await;
+                            tc.error(|e| {
+                                e.with_text("err", format!("app host error: {}", err));
+                            });
+                        },
                     }
                 }
 
