@@ -1,8 +1,6 @@
 
-use lifec::plugins::{Plugin, ThunkContext};
+use lifec::{plugins::{Plugin, ThunkContext}, Component, DenseVecStorage};
 use poem::{Route, Server, endpoint::StaticFilesEndpoint, listener::TcpListener};
-use specs::storage::DenseVecStorage;
-use specs::Component;
 use tokio::{select, sync::oneshot::Sender, task::JoinHandle};
 
 

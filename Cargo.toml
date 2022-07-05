@@ -8,5 +8,5 @@ edition = "2021"
 [dependencies]
 lifec = { git = "https://github.com/juliusl/lifec.git", branch = "main" }
 poem = { version = "1.3.32", features = ["server", "static-files"] }
-specs = { version = "0.18.0", features = ["derive"] }
 tokio = "1.19.2"
+specs = { version = "0.18.0", features = ["derive"] }
