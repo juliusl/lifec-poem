@@ -1,5 +1,5 @@
 [package]
-name = "lifec-poem"
+name = "lifec_poem"
 version = "0.1.0"
 edition = "2021"
 
