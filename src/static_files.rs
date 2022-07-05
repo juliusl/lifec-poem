@@ -1,10 +1,15 @@
 
 use lifec::plugins::{Plugin, ThunkContext};
 use poem::{Route, Server, endpoint::StaticFilesEndpoint, listener::TcpListener};
+use specs::storage::DenseVecStorage;
+use specs::Component;
 use tokio::{select, sync::oneshot::Sender, task::JoinHandle};
+
 
 /// Static files plugin that starts a server host on text_attribute `address`
 /// and serving files from `work_dir`.
+#[derive(Default, Clone, Component)]
+#[storage(DenseVecStorage)]
 pub struct StaticFiles;
 
 impl Plugin<ThunkContext> for StaticFiles {
