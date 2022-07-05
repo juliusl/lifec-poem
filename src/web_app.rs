@@ -60,16 +60,7 @@ where
                     let server = Server::new(TcpListener::bind(address))
                         .run_with_graceful_shutdown(
                             app,
-                            async {
-                                match cancel_source.await {
-                                    Ok(_) => {
-                                        tc.update_status_only("Cancelling server").await;
-                                    },
-                                    Err(err) => {
-                                        tc.update_status_only(format!("Error cancelling server, {}", err)).await;
-                                    },
-                                }
-                            },
+                            async { cancel_source.await.ok().unwrap_or_default() },
                             tc.as_ref()
                                 .find_int("shutdown_timeout_ms")
                                 .and_then(|f| Some(Duration::from_millis(f as u64))),
