@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use lifec::{plugins::{Plugin, ThunkContext, AsyncContext}, Component, DenseVecStorage};
-use poem::{Route, endpoint::StaticFilesEndpoint};
+use poem::{Route, endpoint::{StaticFilesEndpoint, StaticFileEndpoint}};
 use crate::{WebApp, AppHost};
 
 
@@ -37,21 +37,24 @@ impl WebApp for StaticFiles {
 
         let path_prefix = format!("/{block_name}");
         eprintln!("{}", path_prefix);
-        Route::new().nest(
-                path_prefix,
+        let mut routes = Route::new().nest(
+                &path_prefix,
             {
-                let mut static_files = StaticFilesEndpoint::new(
+                let static_files = StaticFilesEndpoint::new(
                     work_dir.to_string()
                 );
 
-                if let Some(index_html) = index_html {
-                    eprintln!("setting index - {}", index_html);
-                    static_files = static_files.index_file(index_html.to_string());
-                }
-
                 static_files
             }
-        )
+        );
+        
+        
+        if let Some(index_html) = index_html {
+            let index_html = PathBuf::from(&work_dir).join(index_html);
+            routes = routes.at(path_prefix, StaticFileEndpoint::new(index_html))
+        }
+     
+        routes 
     }
 }
 
