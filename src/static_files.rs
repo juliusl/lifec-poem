@@ -45,7 +45,7 @@ impl WebApp for StaticFiles {
 
             eprintln!("{:?}", file_src);
 
-            Route::new().nest(path_prefix, StaticFileEndpoint::new(file_src))
+            Route::new().at(path_prefix, StaticFileEndpoint::new(file_src))
         } else {
             Route::new().nest(
                 path_prefix,
