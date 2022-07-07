@@ -4,7 +4,8 @@ use crate::{WebApp, AppHost};
 
 
 /// Static files plugin that starts a server host on text_attribute `address`
-/// and serving files from `work_dir`.
+/// and serving files from `work_dir`. URL will be formatted as {address}/{block_name}/index.html. 
+/// If index_html is set, then {address}/{block_name} will direct to that file.
 #[derive(Default, Clone, Component)]
 #[storage(DenseVecStorage)]
 pub struct StaticFiles(
@@ -12,7 +13,7 @@ pub struct StaticFiles(
     String,
     /// block_name
     String,
-    // index.html
+    // index_html
     Option<String>, 
 );
 
