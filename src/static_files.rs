@@ -34,7 +34,7 @@ impl WebApp for StaticFiles {
         let Self(work_dir, block_name, index_html) = self; 
 
         Route::new().nest(
-            block_name,
+            format!("/{block_name}/"),
             {
                 let mut static_files = StaticFilesEndpoint::new(
                     work_dir.to_string()
