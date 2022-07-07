@@ -33,8 +33,10 @@ impl WebApp for StaticFiles {
     fn routes(&mut self) -> Route {
         let Self(work_dir, block_name, index_html) = self; 
 
+        let path_prefix = format!("{block_name}");
+        eprintln!("{}", path_prefix);
         Route::new().nest(
-            format!("{block_name}/"),
+            "/",
             {
                 let mut static_files = StaticFilesEndpoint::new(
                     work_dir.to_string()
