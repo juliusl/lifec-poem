@@ -51,7 +51,7 @@ impl WebApp for StaticFiles {
         
         if let Some(index_html) = index_html {
             let index_html = PathBuf::from(&work_dir).join(index_html);
-            routes = routes.at(path_prefix, StaticFileEndpoint::new(index_html))
+            routes = routes.at("/", StaticFileEndpoint::new(index_html))
         }
      
         routes 
