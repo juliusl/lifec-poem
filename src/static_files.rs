@@ -1,13 +1,53 @@
-use lifec::{plugins::{Plugin, ThunkContext}, Component, DenseVecStorage};
-use poem::{Route, Server, endpoint::StaticFilesEndpoint, listener::TcpListener};
-use tokio::{sync::oneshot::Sender, task::JoinHandle, select};
+use lifec::{plugins::{Plugin, ThunkContext, AsyncContext}, Component, DenseVecStorage};
+use poem::{Route, endpoint::StaticFilesEndpoint};
+use crate::{WebApp, AppHost};
 
 
 /// Static files plugin that starts a server host on text_attribute `address`
 /// and serving files from `work_dir`.
 #[derive(Default, Clone, Component)]
 #[storage(DenseVecStorage)]
-pub struct StaticFiles;
+pub struct StaticFiles(
+    /// work_dir
+    String,
+    /// block_name
+    String,
+    // index.html
+    Option<String>, 
+);
+
+impl WebApp for StaticFiles {
+    fn create(context: &mut ThunkContext) -> Self {
+        if let Some(work_dir) = context.as_ref().find_text("work_dir") {
+            if let Some(index_html) = context.as_ref().find_text("index_html") {
+                Self(work_dir,  context.block.block_name.to_string(), Some(index_html))
+            } else {
+                Self(work_dir, context.block.block_name.to_string(),  None)
+            }
+        } else {
+            Self("".to_string(), context.block.block_name.to_string(), None)
+        }
+    }
+
+    fn routes(&mut self) -> Route {
+        let Self(work_dir, block_name, index_html) = self; 
+
+        Route::new().nest(
+            block_name,
+            {
+                let mut static_files = StaticFilesEndpoint::new(
+                    work_dir.to_string()
+                );
+
+                if let Some(index_html) = index_html {
+                    static_files = static_files.index_file(index_html.to_string());
+                }
+
+                static_files
+            }
+        )
+    }
+}
 
 impl Plugin<ThunkContext> for StaticFiles {
     fn symbol() -> &'static str {
@@ -18,43 +58,7 @@ impl Plugin<ThunkContext> for StaticFiles {
         "Starts a static file server host for file directory specified by `work_dir`"
     }
 
-    fn call_with_context(context: &mut ThunkContext) -> Option<(JoinHandle<ThunkContext>, Sender<()>)> {
-        context.clone().task(|cancel_source| {
-            let tc = context.clone();
-            async {
-                if let Some(work_dir) = tc.as_ref().find_text("work_dir") {
-                    tc.update_status_only(format!("Serving work_dir {}", work_dir)).await;
-                    let app = Route::new().nest(
-                        "/",
-                        StaticFilesEndpoint::new(
-                            work_dir
-                        ),
-                    );
-                    
-                    if let Some(address) = tc.as_ref().find_text("address") {
-                        tc.update_status_only(format!("Starting {}", address)).await;
-                        select! {
-                            result = Server::new(
-                                TcpListener::bind(address))
-                                .run(app) => {
-                                    match result {
-                                        Ok(_) => {
-                                            tc.update_status_only("Server is exiting").await; 
-                                        },
-                                        Err(err) => {
-                                            tc.update_status_only(format!("Server error exit {}", err)).await;
-                                        },
-                                    }
-                            }
-                            _ = cancel_source => {
-                                tc.update_status_only("Cancelling, server is exiting").await; 
-                            }
-                        }
-                    }
-                }
-
-                Some(tc)
-            }
-        })
+    fn call_with_context(context: &mut ThunkContext) -> Option<AsyncContext> {
+        AppHost::<StaticFiles>::call_with_context(context)
     }
 }

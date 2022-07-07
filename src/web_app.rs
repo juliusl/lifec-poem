@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use lifec::{
-    plugins::{Plugin, ThunkContext},
+    plugins::{Plugin, ThunkContext, AsyncContext},
     Component, DenseVecStorage,
 };
 use poem::{
@@ -46,10 +46,7 @@ where
 
     fn call_with_context(
         context: &mut ThunkContext,
-    ) -> Option<(
-        tokio::task::JoinHandle<ThunkContext>,
-        tokio::sync::oneshot::Sender<()>,
-    )> {
+    ) -> Option<AsyncContext> {
         context.clone().task(|cancel_source| {
             let mut tc = context.clone();
             async {
