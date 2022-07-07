@@ -21,14 +21,15 @@ pub struct StaticFiles(
 
 impl WebApp for StaticFiles {
     fn create(context: &mut ThunkContext) -> Self {
+        let block_name = context.block.block_name.to_string();
         if let Some(work_dir) = context.as_ref().find_text("work_dir") {
             if let Some(index_html) = context.as_ref().find_text("index_html") {
-                Self(work_dir,  context.block.block_name.to_string(), Some(index_html))
+                Self(work_dir, block_name, Some(index_html))
             } else {
-                Self(work_dir, context.block.block_name.to_string(),  None)
+                Self(work_dir, block_name,  None)
             }
         } else {
-            Self("".to_string(), context.block.block_name.to_string(), None)
+            Self("".to_string(), block_name, None)
         }
     }
 
