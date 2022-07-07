@@ -43,6 +43,8 @@ impl WebApp for StaticFiles {
 
             let file_src = PathBuf::from(&work_dir).join(index_html);
 
+            eprintln!("{:?}", file_src);
+
             Route::new().nest(path_prefix, StaticFileEndpoint::new(file_src))
         } else {
             Route::new().nest(
