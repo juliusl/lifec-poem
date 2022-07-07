@@ -43,6 +43,7 @@ impl WebApp for StaticFiles {
                 );
 
                 if let Some(index_html) = index_html {
+                    eprintln!("setting index - {}", index_html);
                     static_files = static_files.index_file(index_html.to_string());
                 }
 
