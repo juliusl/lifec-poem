@@ -1,7 +1,5 @@
-use std::path::PathBuf;
-
 use lifec::{plugins::{Plugin, ThunkContext, AsyncContext}, Component, DenseVecStorage};
-use poem::{Route, endpoint::{StaticFilesEndpoint, StaticFileEndpoint}};
+use poem::{Route, endpoint::StaticFilesEndpoint};
 use crate::{WebApp, AppHost};
 
 
