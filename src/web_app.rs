@@ -40,9 +40,10 @@ where
         "app_host"
     }
 
-    fn description() -> &'static str {
-        "Creates an app host with `address`, w/ routes provided by some type `A` which implements WebApp"
-    }
+    fn description() -> &'static str {r#"
+    Creates an app host with `address`, w/ routes provided by some type `A` which implements WebApp.
+    If a `tls_key` and `tld_crt` are loaded, the app will start with tls enabled.
+    "#}
 
     fn call_with_context(
         context: &mut ThunkContext,
