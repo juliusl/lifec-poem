@@ -57,8 +57,9 @@ where
 
                 // todo duplicated,
                 if let Some(address) = tc.as_ref().find_text("address") {
-                    tc.update_status_only(format!("Starting {}", address)).await;
-                    eprintln!("Starting on {address}");
+                    let log = format!("Listening on {address}");
+                    tc.update_status_only(&log).await;
+                    eprintln!("{log}");
 
                     let mut tcp_conn = Some(TcpListener::bind(address));
                     let mut tls_tcp_conn = None;
@@ -86,10 +87,8 @@ where
                                     Ok(_) => tc.update_status_only("Cancelling server").await,
                                     Err(err) => {
                                         tc.update_status_only(format!(
-                                            "Error cancelling server, {}",
-                                            err
-                                        ))
-                                        .await;
+                                            "Error cancelling server, {err}"
+                                        )).await;
                                     }
                                 }
                             },
@@ -103,10 +102,10 @@ where
                                 tc.update_status_only("Server is exiting").await;
                             }
                             Err(err) => {
-                                tc.update_status_only(format!("Server error exit {}", err))
+                                tc.update_status_only(format!("Server error exit {err}"))
                                     .await;
                                 tc.error(|e| {
-                                    e.with_text("err", format!("app host error: {}", err));
+                                    e.with_text("err", format!("app host error: {err}"));
                                 });
                             }
                         }
@@ -120,8 +119,7 @@ where
                                     Ok(_) => tc.update_status_only("Cancelling server").await,
                                     Err(err) => {
                                         tc.update_status_only(format!(
-                                            "Error cancelling server, {}",
-                                            err
+                                            "Error cancelling server, {err}"
                                         ))
                                         .await;
                                     }
@@ -137,10 +135,10 @@ where
                                 tc.update_status_only("Server is exiting").await;
                             }
                             Err(err) => {
-                                tc.update_status_only(format!("Server error exit {}", err))
+                                tc.update_status_only(format!("Server error exit {err}"))
                                     .await;
                                 tc.error(|e| {
-                                    e.with_text("err", format!("app host error: {}", err));
+                                    e.with_text("err", format!("app host error: {err}"));
                                 });
                             }
                         }
