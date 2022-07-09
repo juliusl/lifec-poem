@@ -57,6 +57,7 @@ where
                 // todo duplicated,
                 if let Some(address) = tc.as_ref().find_text("address") {
                     tc.update_status_only(format!("Starting {}", address)).await;
+                    eprintln!("Starting on {address}");
 
                     let mut tcp_conn = Some(TcpListener::bind(address));
                     let mut tls_tcp_conn = None;
