@@ -1,8 +1,8 @@
 use std::time::Duration;
 
 use lifec::{
-    plugins::{Plugin, ThunkContext, AsyncContext},
-    Component, DenseVecStorage, Extension, AttributeIndex, 
+    plugins::{AsyncContext, Plugin, ThunkContext},
+    AttributeIndex, BlockObject, Component, DenseVecStorage, Extension, BlockProperties,
 };
 use poem::{
     listener::{Listener, RustlsCertificate, RustlsConfig, TcpListener},
@@ -32,11 +32,7 @@ where
     }
 }
 
-impl<A> Extension for AppHost<A>
-where
-    A: WebApp + Send + Sync + 'static 
-{
-}
+impl<A> Extension for AppHost<A> where A: WebApp + Send + Sync + 'static {}
 
 impl<A> Plugin for AppHost<A>
 where
@@ -46,14 +42,14 @@ where
         "app_host"
     }
 
-    fn description() -> &'static str {r#"
+    fn description() -> &'static str {
+        r#"
     Creates an app host with `address`, w/ routes provided by some type `A` which implements WebApp.
     If a `tls_key` and `tld_crt` are loaded, the app will start with tls enabled.
-    "#}
+    "#
+    }
 
-    fn call(
-        context: &ThunkContext,
-    ) -> Option<AsyncContext> {
+    fn call(context: &ThunkContext) -> Option<AsyncContext> {
         context.clone().task(|cancel_source| {
             let mut tc = context.clone();
             async {
@@ -62,7 +58,7 @@ where
                 let app = app.routes();
 
                 // todo duplicated,
-                if let Some(address) = tc.state().find_text("address") {
+                if let Some(address) = tc.state().find_symbol("app_host") {
                     let log = format!("Listening on {address}");
                     tc.update_status_only(&log).await;
                     eprintln!("{log}");
@@ -94,7 +90,8 @@ where
                                     Err(err) => {
                                         tc.update_status_only(format!(
                                             "Error cancelling server, {err}"
-                                        )).await;
+                                        ))
+                                        .await;
                                     }
                                 }
                             },
@@ -154,5 +151,22 @@ where
                 Some(tc)
             }
         })
+    }
+}
+
+impl<A> BlockObject for AppHost<A>
+where
+    A: WebApp + Send + Sync,
+{
+    fn query(&self) -> lifec::BlockProperties {
+        BlockProperties::default()
+            .require("app_host")
+            .optional("shutdown_timeout_ms")
+            .optional("tls_key")
+            .optional("tls_crt")
+    }
+
+    fn parser(&self) -> Option<lifec::CustomAttribute> {
+        Some(Self::as_custom_attr())
     }
 }

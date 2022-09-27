@@ -1,4 +1,4 @@
-use lifec::{plugins::{Plugin, ThunkContext, AsyncContext}, Component, DenseVecStorage, AttributeIndex};
+use lifec::{plugins::{Plugin, ThunkContext, AsyncContext}, Component, DenseVecStorage, AttributeIndex, BlockObject, BlockProperties};
 use poem::{Route, endpoint::StaticFilesEndpoint};
 use crate::{WebApp, AppHost};
 
@@ -11,7 +11,7 @@ use crate::{WebApp, AppHost};
 pub struct StaticFiles(
     /// work_dir
     String,
-    /// block_name
+    /// api_prefix
     String,
     // index_html
     Option<String>, 
@@ -19,7 +19,8 @@ pub struct StaticFiles(
 
 impl WebApp for StaticFiles {
     fn create(context: &mut ThunkContext) -> Self {
-        let block_name = context.state().find_text("block_name").expect("required");
+        let block_name = context.state().find_symbol("api_prefix").expect("required");
+
         if let Some(work_dir) = context.state().find_text("work_dir") {
             if let Some(index_html) = context.state().find_text("index_html") {
                 Self(work_dir, block_name, Some(index_html))
@@ -64,5 +65,23 @@ impl Plugin for StaticFiles {
 
     fn call(context: &ThunkContext) -> Option<AsyncContext> {
         AppHost::<StaticFiles>::call(context)
+    }
+}
+
+impl BlockObject for StaticFiles {
+    fn query(&self) -> lifec::BlockProperties {
+        BlockProperties::default()
+            .require("app_host")
+            .optional("shutdown_timeout_ms")
+            .optional("tls_key")
+            .optional("tls_crt")
+            .require("static_files")
+            .require("api_prefix")
+            .optional("work_dir")
+            .optional("index_html")
+    }
+
+    fn parser(&self) -> Option<lifec::CustomAttribute> {
+        Some(StaticFiles::as_custom_attr())
     }
 }
