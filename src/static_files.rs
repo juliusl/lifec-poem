@@ -1,4 +1,4 @@
-use lifec::{plugins::{Plugin, ThunkContext, AsyncContext}, Component, DenseVecStorage};
+use lifec::{plugins::{Plugin, ThunkContext, AsyncContext}, Component, DenseVecStorage, AttributeIndex};
 use poem::{Route, endpoint::StaticFilesEndpoint};
 use crate::{WebApp, AppHost};
 
@@ -19,9 +19,9 @@ pub struct StaticFiles(
 
 impl WebApp for StaticFiles {
     fn create(context: &mut ThunkContext) -> Self {
-        let block_name = context.block.block_name.to_string();
-        if let Some(work_dir) = context.as_ref().find_text("work_dir") {
-            if let Some(index_html) = context.as_ref().find_text("index_html") {
+        let block_name = context.state().find_text("block_name").expect("required");
+        if let Some(work_dir) = context.state().find_text("work_dir") {
+            if let Some(index_html) = context.state().find_text("index_html") {
                 Self(work_dir, block_name, Some(index_html))
             } else {
                 Self(work_dir, block_name,  None)
@@ -53,7 +53,7 @@ impl WebApp for StaticFiles {
     }
 }
 
-impl Plugin<ThunkContext> for StaticFiles {
+impl Plugin for StaticFiles {
     fn symbol() -> &'static str {
         "static_files"
     }
@@ -62,7 +62,7 @@ impl Plugin<ThunkContext> for StaticFiles {
         "Starts a static file server host for file directory specified by `work_dir`"
     }
 
-    fn call_with_context(context: &mut ThunkContext) -> Option<AsyncContext> {
-        AppHost::<StaticFiles>::call_with_context(context)
+    fn call(context: &ThunkContext) -> Option<AsyncContext> {
+        AppHost::<StaticFiles>::call(context)
     }
 }

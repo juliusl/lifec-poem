@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use lifec::{
     plugins::{Plugin, ThunkContext, AsyncContext},
-    Component, DenseVecStorage,
+    Component, DenseVecStorage, Extension, AttributeIndex, 
 };
 use poem::{
     listener::{Listener, RustlsCertificate, RustlsConfig, TcpListener},
@@ -32,7 +32,13 @@ where
     }
 }
 
-impl<A> Plugin<ThunkContext> for AppHost<A>
+impl<A> Extension for AppHost<A>
+where
+    A: WebApp + Send + Sync + 'static 
+{
+}
+
+impl<A> Plugin for AppHost<A>
 where
     A: WebApp + Send + Sync,
 {
@@ -45,8 +51,8 @@ where
     If a `tls_key` and `tld_crt` are loaded, the app will start with tls enabled.
     "#}
 
-    fn call_with_context(
-        context: &mut ThunkContext,
+    fn call(
+        context: &ThunkContext,
     ) -> Option<AsyncContext> {
         context.clone().task(|cancel_source| {
             let mut tc = context.clone();
@@ -56,7 +62,7 @@ where
                 let app = app.routes();
 
                 // todo duplicated,
-                if let Some(address) = tc.as_ref().find_text("address") {
+                if let Some(address) = tc.state().find_text("address") {
                     let log = format!("Listening on {address}");
                     tc.update_status_only(&log).await;
                     eprintln!("{log}");
@@ -66,8 +72,8 @@ where
 
                     // Enable TLS
                     if let (Some(key), Some(cert)) = (
-                        tc.as_ref().find_binary("tls_key"),
-                        tc.as_ref().find_binary("tls_crt"),
+                        tc.state().find_binary("tls_key"),
+                        tc.state().find_binary("tls_crt"),
                     ) {
                         if let Some(conn) = tcp_conn.take() {
                             tls_tcp_conn = Some(
@@ -92,7 +98,7 @@ where
                                     }
                                 }
                             },
-                            tc.as_ref()
+                            tc.state()
                                 .find_int("shutdown_timeout_ms")
                                 .and_then(|f| Some(Duration::from_millis(f as u64))),
                         );
@@ -125,7 +131,7 @@ where
                                     }
                                 }
                             },
-                            tc.as_ref()
+                            tc.state()
                                 .find_int("shutdown_timeout_ms")
                                 .and_then(|f| Some(Duration::from_millis(f as u64))),
                         );
