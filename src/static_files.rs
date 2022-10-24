@@ -1,4 +1,4 @@
-use lifec::{plugins::{Plugin, ThunkContext, AsyncContext}, Component, DenseVecStorage, AttributeIndex, BlockObject, BlockProperties};
+use lifec::prelude::*;
 use poem::{Route, endpoint::StaticFilesEndpoint};
 use crate::{WebApp, AppHost};
 
@@ -69,7 +69,7 @@ impl Plugin for StaticFiles {
 }
 
 impl BlockObject for StaticFiles {
-    fn query(&self) -> lifec::BlockProperties {
+    fn query(&self) -> BlockProperties {
         BlockProperties::default()
             .require("app_host")
             .optional("shutdown_timeout_ms")
@@ -81,7 +81,7 @@ impl BlockObject for StaticFiles {
             .optional("index_html")
     }
 
-    fn parser(&self) -> Option<lifec::CustomAttribute> {
+    fn parser(&self) -> Option<CustomAttribute> {
         Some(StaticFiles::as_custom_attr())
     }
 }

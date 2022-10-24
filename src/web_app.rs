@@ -1,9 +1,7 @@
 use std::time::Duration;
 
-use lifec::{
-    plugins::{AsyncContext, Plugin, ThunkContext},
-    AttributeIndex, BlockObject, Component, DenseVecStorage, Extension, BlockProperties,
-};
+use lifec::prelude::*;
+
 use poem::{
     listener::{Listener, RustlsCertificate, RustlsConfig, TcpListener},
     Route, Server,
@@ -158,7 +156,7 @@ impl<A> BlockObject for AppHost<A>
 where
     A: WebApp + Send + Sync,
 {
-    fn query(&self) -> lifec::BlockProperties {
+    fn query(&self) -> BlockProperties {
         BlockProperties::default()
             .require("app_host")
             .optional("shutdown_timeout_ms")
@@ -166,7 +164,7 @@ where
             .optional("tls_crt")
     }
 
-    fn parser(&self) -> Option<lifec::CustomAttribute> {
+    fn parser(&self) -> Option<CustomAttribute> {
         Some(Self::as_custom_attr())
     }
 }
