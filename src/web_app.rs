@@ -3,10 +3,12 @@ use std::time::Duration;
 use lifec::prelude::*;
 
 use poem::{
-    listener::{Listener, RustlsCertificate, RustlsConfig, TcpListener},
-    Route, Server,
+    listener::{Acceptor, Listener, RustlsCertificate, RustlsConfig, TcpListener}, Route, Server,
 };
+use tokio::sync::oneshot::Receiver;
 
+/// Trait that enables a web app to be hosted via AppHost plugin,
+///
 pub trait WebApp {
     /// update context and returns a new instance of self
     fn create(context: &mut ThunkContext) -> Self;
@@ -15,22 +17,63 @@ pub trait WebApp {
     fn routes(&mut self) -> Route;
 }
 
+/// Wrapper struct over a function to create a new web app,
+///
 #[derive(Component)]
 #[storage(DenseVecStorage)]
-pub struct AppHost<A>(fn(&mut ThunkContext) -> A)
+pub struct AppHost<A>(Option<A>)
 where
     A: WebApp + Send + Sync + 'static;
 
-impl<A> Default for AppHost<A>
+impl<A> AppHost<A>
 where
-    A: WebApp + Send + Sync,
+    A: WebApp + Send + Sync + 'static,
 {
-    fn default() -> Self {
-        Self(A::create)
+    /// Starts the server,
+    ///
+    pub async fn start_server<L, B>(
+        &mut self,
+        tc: &mut ThunkContext,
+        cancel_source: Receiver<()>,
+        server: Server<L, B>,
+    ) where
+        L: Listener + 'static,
+        B: Acceptor + 'static,
+    {
+        if let AppHost(Some(app)) = self {
+            let server = server.run_with_graceful_shutdown(
+                app.routes(),
+                async {
+                    match cancel_source.await {
+                        Ok(_) => tc.update_status_only("Cancelling server").await,
+                        Err(err) => {
+                            tc.update_status_only(format!("Error cancelling server, {err}"))
+                                .await;
+                        }
+                    }
+                },
+                tc.state()
+                    .find_int("shutdown_timeout_ms")
+                    .and_then(|f| Some(Duration::from_millis(f as u64))),
+            );
+    
+            match server.await {
+                Ok(_) => {
+                    tc.update_status_only("Server is exiting").await;
+                }
+                Err(err) => {
+                    event!(Level::ERROR, "Server host error, {err}");
+    
+                    tc.update_status_only(format!("Server error exit {err}"))
+                        .await;
+                    tc.error(|e| {
+                        e.with_text("err", format!("app host error: {err}"));
+                    });
+                }
+            }
+        }
     }
 }
-
-impl<A> Extension for AppHost<A> where A: WebApp + Send + Sync + 'static {}
 
 impl<A> Plugin for AppHost<A>
 where
@@ -51,15 +94,10 @@ where
         context.clone().task(|cancel_source| {
             let mut tc = context.clone();
             async {
-                let mut app = A::create(&mut tc);
-
-                let app = app.routes();
-
-                // todo duplicated,
                 if let Some(address) = tc.state().find_symbol("app_host") {
-                    let log = format!("Listening on {address}");
-                    tc.update_status_only(&log).await;
-                    eprintln!("{log}");
+                    event!(Level::DEBUG, "Trying to start server on {address}");
+
+                    let mut app_host = AppHost(Some(A::create(&mut tc)));
 
                     let mut tcp_conn = Some(TcpListener::bind(address));
                     let mut tls_tcp_conn = None;
@@ -80,69 +118,11 @@ where
                     }
 
                     if let Some(tls_conn) = tls_tcp_conn {
-                        let server = Server::new(tls_conn).run_with_graceful_shutdown(
-                            app,
-                            async {
-                                match cancel_source.await {
-                                    Ok(_) => tc.update_status_only("Cancelling server").await,
-                                    Err(err) => {
-                                        tc.update_status_only(format!(
-                                            "Error cancelling server, {err}"
-                                        ))
-                                        .await;
-                                    }
-                                }
-                            },
-                            tc.state()
-                                .find_int("shutdown_timeout_ms")
-                                .and_then(|f| Some(Duration::from_millis(f as u64))),
-                        );
-
-                        match server.await {
-                            Ok(_) => {
-                                tc.update_status_only("Server is exiting").await;
-                            }
-                            Err(err) => {
-                                tc.update_status_only(format!("Server error exit {err}"))
-                                    .await;
-                                tc.error(|e| {
-                                    e.with_text("err", format!("app host error: {err}"));
-                                });
-                            }
-                        }
-                    } else {
-                        // todo dedupe
-                        let tcp_conn = tcp_conn.unwrap();
-                        let server = Server::new(tcp_conn).run_with_graceful_shutdown(
-                            app,
-                            async {
-                                match cancel_source.await {
-                                    Ok(_) => tc.update_status_only("Cancelling server").await,
-                                    Err(err) => {
-                                        tc.update_status_only(format!(
-                                            "Error cancelling server, {err}"
-                                        ))
-                                        .await;
-                                    }
-                                }
-                            },
-                            tc.state()
-                                .find_int("shutdown_timeout_ms")
-                                .and_then(|f| Some(Duration::from_millis(f as u64))),
-                        );
-
-                        match server.await {
-                            Ok(_) => {
-                                tc.update_status_only("Server is exiting").await;
-                            }
-                            Err(err) => {
-                                tc.update_status_only(format!("Server error exit {err}"))
-                                    .await;
-                                tc.error(|e| {
-                                    e.with_text("err", format!("app host error: {err}"));
-                                });
-                            }
-                        }
+                        let server = Server::new(tls_conn);
+                        app_host.start_server(&mut tc, cancel_source, server).await;
+                    } else if let Some(tcp_conn) = tcp_conn {
+                        let server = Server::new(tcp_conn);
+                        app_host.start_server(&mut tc, cancel_source, server).await;
                     }
                 }
 
@@ -168,3 +148,14 @@ where
         Some(Self::as_custom_attr())
     }
 }
+
+impl<A> Default for AppHost<A>
+where
+    A: WebApp + Send + Sync,
+{
+    fn default() -> Self {
+        Self(None)
+    }
+}
+
+impl<A> Extension for AppHost<A> where A: WebApp + Send + Sync + 'static {}

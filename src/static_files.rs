@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use lifec::prelude::*;
 use poem::{Route, endpoint::StaticFilesEndpoint};
 use crate::{WebApp, AppHost};
@@ -10,7 +12,7 @@ use crate::{WebApp, AppHost};
 #[storage(DenseVecStorage)]
 pub struct StaticFiles(
     /// work_dir
-    String,
+    PathBuf,
     /// api_prefix
     String,
     // index_html
@@ -19,16 +21,16 @@ pub struct StaticFiles(
 
 impl WebApp for StaticFiles {
     fn create(context: &mut ThunkContext) -> Self {
-        let block_name = context.state().find_symbol("api_prefix").expect("required");
+        let block_name = context.state().find_symbol("api_prefix").expect("should have an api prefix");
 
-        if let Some(work_dir) = context.state().find_text("work_dir") {
+        if let Some(work_dir) = context.work_dir() {
             if let Some(index_html) = context.state().find_text("index_html") {
                 Self(work_dir, block_name, Some(index_html))
             } else {
                 Self(work_dir, block_name,  None)
             }
         } else {
-            Self("".to_string(), block_name, None)
+            Self(PathBuf::from(""), block_name, None)
         }
     }
 
@@ -36,12 +38,12 @@ impl WebApp for StaticFiles {
         let Self(work_dir, block_name, index_html) = self; 
 
         let path_prefix = format!("/{block_name}");
-        eprintln!("{}", path_prefix);
+        event!(Level::DEBUG, "Hosting, {path_prefix}");
         Route::new().nest(
                 &path_prefix,
             {
                 let mut static_files = StaticFilesEndpoint::new(
-                    work_dir.to_string()
+                   &work_dir
                 );        
 
                 if let Some(index_html) = index_html {
