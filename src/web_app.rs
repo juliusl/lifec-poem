@@ -95,7 +95,7 @@ where
             let mut tc = context.clone();
             async {
                 if let Some(address) = tc.state().find_symbol("app_host") {
-                    event!(Level::DEBUG, "Trying to start server on {address}");
+                    eprintln!("Starting {address}");
 
                     let mut app_host = AppHost(Some(A::create(&mut tc)));
 
