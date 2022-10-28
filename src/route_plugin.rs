@@ -9,7 +9,7 @@ pub trait RoutePlugin : Plugin {
     /// Generally, plugins are stateless, but this trait will likely be used in conjunction with the WebApp trait. This means that, there will
     /// be a start-up phase of the app host that gives implementations, the chance to initialize/customize a route.
     /// 
-    fn route(context: &ThunkContext) -> Route;
+    fn route(&self) -> Route;
 
     /// Returns a response from the context,
     /// 
