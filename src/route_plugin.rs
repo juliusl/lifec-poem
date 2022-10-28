@@ -1,5 +1,5 @@
 use lifec::prelude::ThunkContext;
-use poem::{Response, Route};
+use poem::{Response, RouteMethod};
 
 /// Plugin w/ a route, that handles the output of a plugin call sequence,
 /// 
@@ -9,7 +9,7 @@ pub trait RoutePlugin {
     /// Generally, plugins are stateless, but this trait will likely be used in conjunction with the WebApp trait. This means that, there will
     /// be a start-up phase of the app host that gives implementations, the chance to initialize/customize a route.
     /// 
-    fn route(&self, route: Route) -> Route;
+    fn route(&self, route_method: RouteMethod) -> RouteMethod;
 
     /// Returns a response from the context,
     /// 
