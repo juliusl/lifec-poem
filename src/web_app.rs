@@ -21,7 +21,7 @@ pub trait WebApp {
 ///
 #[derive(Component)]
 #[storage(DenseVecStorage)]
-pub struct AppHost<A>(pub Option<A>)
+pub struct AppHost<A>(Option<A>)
 where
     A: WebApp + Send + Sync + 'static;
 
