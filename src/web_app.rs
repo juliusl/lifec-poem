@@ -90,7 +90,7 @@ where
     "#
     }
 
-    fn call(context: &ThunkContext) -> Option<AsyncContext> {
+    fn call(context: &mut ThunkContext) -> Option<AsyncContext> {
         context.clone().task(|cancel_source| {
             let mut tc = context.clone();
             async {

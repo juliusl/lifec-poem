@@ -65,7 +65,7 @@ impl Plugin for StaticFiles {
         "Starts a static file server host for file directory specified by `work_dir`"
     }
 
-    fn call(context: &ThunkContext) -> Option<AsyncContext> {
+    fn call(context: &mut ThunkContext) -> Option<AsyncContext> {
         AppHost::<StaticFiles>::call(context)
     }
 }
