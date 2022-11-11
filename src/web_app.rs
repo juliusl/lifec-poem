@@ -45,9 +45,9 @@ where
                 app.routes(),
                 async {
                     match cancel_source.await {
-                        Ok(_) => tc.update_status_only("Cancelling server").await,
+                        Ok(_) => tc.status("Cancelling server").await,
                         Err(err) => {
-                            tc.update_status_only(format!("Error cancelling server, {err}"))
+                            tc.status(format!("Error cancelling server, {err}"))
                                 .await;
                         }
                     }
@@ -59,12 +59,12 @@ where
     
             match server.await {
                 Ok(_) => {
-                    tc.update_status_only("Server is exiting").await;
+                    tc.status("Server is exiting").await;
                 }
                 Err(err) => {
                     event!(Level::ERROR, "Server host error, {err}");
     
-                    tc.update_status_only(format!("Server error exit {err}"))
+                    tc.status(format!("Server error exit {err}"))
                         .await;
                     tc.error(|e| {
                         e.with_text("err", format!("app host error: {err}"));
@@ -157,5 +157,3 @@ where
         Self(None)
     }
 }
-
-impl<A> Extension for AppHost<A> where A: WebApp + Send + Sync + 'static {}
